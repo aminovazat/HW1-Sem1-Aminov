@@ -1,0 +1,14 @@
+name: Show Date and Time
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  print-datetime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Показать текущую дату и время
+        run: date
