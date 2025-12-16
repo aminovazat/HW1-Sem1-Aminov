@@ -1,3 +1,5 @@
+package com.mipt.azataminov;
+
 public class Application {
 
     public static void main(String[] args) {
