@@ -1,5 +1,6 @@
 package com.azat.h1.service;
 
+import com.azat.h1.exception.TaskNotFoundException;
 import com.azat.h1.model.Task;
 import com.azat.h1.repository.TaskRepository;
 import jakarta.annotation.PostConstruct;
@@ -48,6 +49,10 @@ public class TaskService {
 		return repository.findById(id);
 	}
 
+	public Task getRequiredTask(Long id) {
+		return repository.findById(id).orElseThrow(() -> new TaskNotFoundException(id));
+	}
+
 	public Task createTask(Task task) {
 		Task savedTask = repository.save(task);
 		taskCache.put(String.valueOf(savedTask.getId()), savedTask);
@@ -55,6 +60,13 @@ public class TaskService {
 	}
 
 	public Optional<Task> updateTask(Long id, Task task) {
+		Task existingTask = getRequiredTask(id);
+		if (task.getDueDate() != null
+				&& existingTask.getCreatedAt() != null
+				&& task.getDueDate().isBefore(existingTask.getCreatedAt().toLocalDate())) {
+			throw new IllegalArgumentException("dueDate must not be before task creation date");
+		}
+		task.setCreatedAt(existingTask.getCreatedAt());
 		Optional<Task> updatedTask = repository.update(id, task);
 		updatedTask.ifPresent(value -> taskCache.put(String.valueOf(id), value));
 		return updatedTask;

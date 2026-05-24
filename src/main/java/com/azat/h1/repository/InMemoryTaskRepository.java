@@ -1,11 +1,14 @@
 package com.azat.h1.repository;
 
 import com.azat.h1.model.Task;
+import com.azat.h1.model.Priority;
 import com.azat.h1.service.PrototypeScopedBean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +46,15 @@ public class InMemoryTaskRepository implements TaskRepository {
 	public Task save(Task task) {
 		if (task.getId() == null) {
 			task.setId(prototypeScopedBeanProvider.getObject().generateTaskId());
+		}
+		if (task.getCreatedAt() == null) {
+			task.setCreatedAt(LocalDateTime.now());
+		}
+		if (task.getPriority() == null) {
+			task.setPriority(Priority.MEDIUM);
+		}
+		if (task.getTags() == null) {
+			task.setTags(new HashSet<>());
 		}
 
 		tasks.put(task.getId(), task);
