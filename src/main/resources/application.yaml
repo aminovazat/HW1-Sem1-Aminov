@@ -8,6 +8,59 @@ app:
 api:
   version: 2.0.0
 
+security:
+  jwt:
+    secret: "change-me-change-me-change-me-change-me-change-me"
+    expiration-minutes: 60
+  password:
+    pepper: "local-dev-pepper"
+
+external:
+  api:
+    base-url: "http://localhost:8080/external/v1"
+    connect-timeout-ms: 1000
+    read-timeout-ms: 1500
+    user-agent: "h1-gateway/1.0"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,ratelimiters
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      externalApi:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 2
+        waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        registerHealthIndicator: true
+  ratelimiter:
+    instances:
+      externalApi:
+        limitForPeriod: 5
+        limitRefreshPeriod: 10s
+        timeoutDuration: 0
+  retry:
+    instances:
+      externalApi:
+        maxAttempts: 2
+        waitDuration: 200ms
+        retryExceptions:
+          - com.azat.h1.exception.ExternalApiException
+  timelimiter:
+    instances:
+      externalApi:
+        timeoutDuration: 2s
+
 spring:
   servlet:
     multipart:

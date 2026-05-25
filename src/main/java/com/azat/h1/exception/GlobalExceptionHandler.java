@@ -73,6 +73,16 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
 	}
 
+	@ExceptionHandler(ExternalTaskNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleExternalTaskNotFound(ExternalTaskNotFoundException ex, HttpServletRequest request) {
+		return error(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+	}
+
+	@ExceptionHandler(ExternalApiException.class)
+	public ResponseEntity<ErrorResponse> handleExternalApi(ExternalApiException ex, HttpServletRequest request) {
+		return error(HttpStatus.BAD_GATEWAY, ex.getMessage(), request, null);
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
 		return error(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request, null);
