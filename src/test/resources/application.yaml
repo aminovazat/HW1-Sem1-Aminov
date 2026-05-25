@@ -1,0 +1,8 @@
+api:
+  version: 2.0.0
+
+spring:
+  profiles:
+    active: test
+  jpa:
+    open-in-view: false

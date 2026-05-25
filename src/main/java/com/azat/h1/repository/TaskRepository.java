@@ -1,22 +1,30 @@
 package com.azat.h1.repository;
 
 import com.azat.h1.model.Task;
+import com.azat.h1.model.Priority;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Provides CRUD operations for tasks.
  */
-public interface TaskRepository {
+public interface TaskRepository extends JpaRepository<Task, Long> {
 
-	List<Task> findAll();
+	List<Task> findByCompletedAndPriority(boolean completed, Priority priority);
 
-	Optional<Task> findById(Long id);
+	@Query("""
+			select task
+			from Task task
+			where task.dueDate between :from and :to
+			order by task.dueDate asc
+			""")
+	List<Task> findTasksDueBetween(LocalDate from, LocalDate to);
 
-	Task save(Task task);
-
-	Optional<Task> update(Long id, Task task);
-
-	boolean deleteById(Long id);
+	@EntityGraph(attributePaths = "attachments")
+	@Query("select task from Task task")
+	List<Task> findAllWithAttachments();
 }

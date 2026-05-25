@@ -1,20 +1,50 @@
 package com.azat.h1.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
  * Stores metadata for a file attached to a task.
  */
+@Entity
+@Table(name = "task_attachments")
 public class TaskAttachment {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Column(name = "task_id", nullable = false)
 	private Long taskId;
+
+	@Column(name = "file_name", nullable = false)
 	private String fileName;
+
+	@Column(name = "stored_file_name", nullable = false, unique = true)
 	private String storedFileName;
+
+	@Column(name = "content_type")
 	private String contentType;
+
+	@Column(nullable = false)
 	private long size;
+
+	@Column(name = "uploaded_at", nullable = false)
 	private LocalDateTime uploadedAt;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "task_id", insertable = false, updatable = false)
+	private Task task;
 
 	public TaskAttachment() {
 	}
@@ -44,6 +74,15 @@ public class TaskAttachment {
 
 	public void setTaskId(Long taskId) {
 		this.taskId = taskId;
+	}
+
+	public Task getTask() {
+		return task;
+	}
+
+	public void setTask(Task task) {
+		this.task = task;
+		this.taskId = task == null ? null : task.getId();
 	}
 
 	public String getFileName() {

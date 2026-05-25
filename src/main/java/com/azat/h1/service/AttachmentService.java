@@ -90,7 +90,8 @@ public class AttachmentService {
 		} catch (IOException ex) {
 			throw new IllegalStateException("Could not delete attachment file", ex);
 		}
-		return attachmentRepository.deleteById(attachmentId);
+		attachmentRepository.deleteById(attachmentId);
+		return true;
 	}
 
 	public List<AttachmentResponseDto> getTaskAttachments(Long taskId) {

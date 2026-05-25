@@ -1,6 +1,7 @@
 package com.azat.h1.service;
 
 import com.azat.h1.repository.TaskRepository;
+import com.azat.h1.repository.StubTaskRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -11,10 +12,10 @@ import org.springframework.stereotype.Service;
 public class TaskStatisticsService {
 
 	private final TaskRepository primaryRepository;
-	private final TaskRepository stubRepository;
+	private final StubTaskRepository stubRepository;
 
 	public TaskStatisticsService(TaskRepository primaryRepository,
-			@Qualifier("stubTaskRepository") TaskRepository stubRepository) {
+			@Qualifier("stubTaskRepository") StubTaskRepository stubRepository) {
 		this.primaryRepository = primaryRepository;
 		this.stubRepository = stubRepository;
 	}

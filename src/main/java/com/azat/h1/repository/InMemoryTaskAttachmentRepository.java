@@ -1,7 +1,6 @@
 package com.azat.h1.repository;
 
 import com.azat.h1.model.TaskAttachment;
-import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,15 +10,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Stores task attachment metadata in memory.
+ * Legacy in-memory attachment store kept out of the runtime Spring context.
  */
-@Repository
-public class InMemoryTaskAttachmentRepository implements TaskAttachmentRepository {
+public class InMemoryTaskAttachmentRepository {
 
 	private final Map<Long, TaskAttachment> attachments = new ConcurrentHashMap<>();
 	private final AtomicLong idGenerator = new AtomicLong(1);
 
-	@Override
 	public TaskAttachment save(TaskAttachment attachment) {
 		if (attachment.getId() == null) {
 			attachment.setId(idGenerator.getAndIncrement());
@@ -28,19 +25,16 @@ public class InMemoryTaskAttachmentRepository implements TaskAttachmentRepositor
 		return attachment;
 	}
 
-	@Override
 	public Optional<TaskAttachment> findById(Long id) {
 		return Optional.ofNullable(attachments.get(id));
 	}
 
-	@Override
 	public List<TaskAttachment> findByTaskId(Long taskId) {
 		return attachments.values().stream()
 				.filter(attachment -> taskId.equals(attachment.getTaskId()))
 				.toList();
 	}
 
-	@Override
 	public boolean deleteById(Long id) {
 		return attachments.remove(id) != null;
 	}

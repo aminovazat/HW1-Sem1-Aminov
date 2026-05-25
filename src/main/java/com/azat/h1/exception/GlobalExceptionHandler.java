@@ -46,7 +46,8 @@ public class GlobalExceptionHandler {
 			MissingServletRequestPartException.class,
 			HttpMessageNotReadableException.class,
 			HttpMediaTypeNotSupportedException.class,
-			IllegalArgumentException.class
+			IllegalArgumentException.class,
+			BulkTaskUpdateException.class
 	})
 	public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex, HttpServletRequest request) {
 		return error(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);

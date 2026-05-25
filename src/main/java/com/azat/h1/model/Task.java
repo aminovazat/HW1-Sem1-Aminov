@@ -1,10 +1,30 @@
 package com.azat.h1.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -12,16 +32,46 @@ import java.util.Set;
  * Represents a to-do task.
  */
 @Schema(description = "Internal task entity")
+@Entity
+@Table(name = "tasks")
+@EntityListeners(AuditingEntityListener.class)
 public class Task {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Column(nullable = false, length = 100)
 	private String title;
+
+	@Column(length = 500)
 	private String description;
+
+	@Column(nullable = false)
 	private boolean completed;
+
+	@CreatedDate
+	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
+
+	@LastModifiedDate
+	@Column(name = "last_modified_at")
+	private LocalDateTime lastModifiedAt;
+
+	@Column(name = "due_date")
 	private LocalDate dueDate;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
 	private Priority priority;
+
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "task_tags", joinColumns = @JoinColumn(name = "task_id"))
+	@Column(name = "tag", nullable = false)
 	private Set<String> tags = new HashSet<>();
+
+	@OneToMany(mappedBy = "task", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+	private List<TaskAttachment> attachments = new ArrayList<>();
 
 	public Task() {
 	}
@@ -82,6 +132,14 @@ public class Task {
 		this.createdAt = createdAt;
 	}
 
+	public LocalDateTime getLastModifiedAt() {
+		return lastModifiedAt;
+	}
+
+	public void setLastModifiedAt(LocalDateTime lastModifiedAt) {
+		this.lastModifiedAt = lastModifiedAt;
+	}
+
 	public LocalDate getDueDate() {
 		return dueDate;
 	}
@@ -106,6 +164,14 @@ public class Task {
 		this.tags = tags == null ? new HashSet<>() : new HashSet<>(tags);
 	}
 
+	public List<TaskAttachment> getAttachments() {
+		return attachments;
+	}
+
+	public void setAttachments(List<TaskAttachment> attachments) {
+		this.attachments = attachments == null ? new ArrayList<>() : new ArrayList<>(attachments);
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -119,6 +185,7 @@ public class Task {
 				&& Objects.equals(title, task.title)
 				&& Objects.equals(description, task.description)
 				&& Objects.equals(createdAt, task.createdAt)
+				&& Objects.equals(lastModifiedAt, task.lastModifiedAt)
 				&& Objects.equals(dueDate, task.dueDate)
 				&& priority == task.priority
 				&& Objects.equals(tags, task.tags);
@@ -126,7 +193,7 @@ public class Task {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, title, description, completed, createdAt, dueDate, priority, tags);
+		return Objects.hash(id, title, description, completed, createdAt, lastModifiedAt, dueDate, priority, tags);
 	}
 
 	@Override
@@ -137,6 +204,7 @@ public class Task {
 				+ ", description='" + description + '\''
 				+ ", completed=" + completed
 				+ ", createdAt=" + createdAt
+				+ ", lastModifiedAt=" + lastModifiedAt
 				+ ", dueDate=" + dueDate
 				+ ", priority=" + priority
 				+ ", tags=" + tags

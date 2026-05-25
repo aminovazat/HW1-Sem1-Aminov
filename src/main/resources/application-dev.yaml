@@ -2,3 +2,16 @@ logging:
   level:
     root: INFO
     com.azat.h1: DEBUG
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/todo_manager
+    username: todo
+    password: todo
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
