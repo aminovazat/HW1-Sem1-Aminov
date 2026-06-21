@@ -1,10 +1,19 @@
 package com.azat.h1.controller;
 
+import com.azat.h1.dto.TaskCreateDto;
+import com.azat.h1.dto.TaskResponseDto;
+import com.azat.h1.dto.TaskUpdateDto;
+import com.azat.h1.mapper.TaskMapper;
 import com.azat.h1.model.Task;
 import com.azat.h1.service.TaskService;
 import com.azat.h1.service.TaskStatisticsService;
+import com.azat.h1.validation.OnCreate;
+import com.azat.h1.validation.OnUpdate;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,53 +34,75 @@ public class TaskController {
 
 	private final TaskService taskService;
 	private final TaskStatisticsService taskStatisticsService;
+	private final TaskMapper taskMapper;
 
-	public TaskController(TaskService taskService, TaskStatisticsService taskStatisticsService) {
+	public TaskController(TaskService taskService, TaskStatisticsService taskStatisticsService, TaskMapper taskMapper) {
 		this.taskService = taskService;
 		this.taskStatisticsService = taskStatisticsService;
+		this.taskMapper = taskMapper;
 	}
 
+	@Operation(summary = "Get all tasks")
+	@ApiResponse(responseCode = "200", description = "Tasks returned")
 	@GetMapping
-	public List<Task> getAllTasks() {
-		return taskService.getAllTasks();
+	public ResponseEntity<List<TaskResponseDto>> getAllTasks() {
+		List<TaskResponseDto> tasks = taskMapper.toResponseDtos(taskService.getAllTasks());
+		return ResponseEntity.ok()
+				.header("X-Total-Count", String.valueOf(tasks.size()))
+				.body(tasks);
 	}
 
+	@Operation(summary = "Compare primary and stub repositories")
+	@ApiResponse(responseCode = "200", description = "Statistics returned")
 	@GetMapping("/statistics")
-	public String getStatistics() {
-		return taskStatisticsService.compareRepositories();
+	public ResponseEntity<String> getStatistics() {
+		return ResponseEntity.ok(taskStatisticsService.compareRepositories());
 	}
 
+	@Operation(summary = "Show request and prototype scope details")
+	@ApiResponse(responseCode = "200", description = "Scope details returned")
 	@GetMapping("/scope")
-	public String getScopeDetails() {
-		return taskStatisticsService.getScopeDetails();
+	public ResponseEntity<String> getScopeDetails() {
+		return ResponseEntity.ok(taskStatisticsService.getScopeDetails());
 	}
 
+	@Operation(summary = "Get a task by id")
+	@ApiResponse(responseCode = "200", description = "Task found")
+	@ApiResponse(responseCode = "404", description = "Task not found")
 	@GetMapping("/{id}")
-	public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
-		return taskService.getTaskById(id)
-				.map(ResponseEntity::ok)
-				.orElseGet(() -> ResponseEntity.notFound().build());
+	public ResponseEntity<TaskResponseDto> getTaskById(@PathVariable Long id) {
+		return ResponseEntity.ok(taskMapper.toResponseDto(taskService.getTaskOrThrow(id)));
 	}
 
+	@Operation(summary = "Create a task")
+	@ApiResponse(responseCode = "201", description = "Task created")
+	@ApiResponse(responseCode = "400", description = "Request validation failed")
 	@PostMapping
-	public ResponseEntity<Task> createTask(@RequestBody Task task) {
-		Task createdTask = taskService.createTask(task);
-		return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
+	public ResponseEntity<TaskResponseDto> createTask(@Validated(OnCreate.class) @RequestBody TaskCreateDto taskDto) {
+		Task createdTask = taskService.createTask(taskMapper.toEntity(taskDto));
+		return ResponseEntity.status(HttpStatus.CREATED).body(taskMapper.toResponseDto(createdTask));
 	}
 
+	@Operation(summary = "Update a task")
+	@ApiResponse(responseCode = "200", description = "Task updated")
+	@ApiResponse(responseCode = "400", description = "Request validation failed")
+	@ApiResponse(responseCode = "404", description = "Task not found")
 	@PutMapping("/{id}")
-	public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
-		return taskService.updateTask(id, task)
-				.map(ResponseEntity::ok)
-				.orElseGet(() -> ResponseEntity.notFound().build());
+	public ResponseEntity<TaskResponseDto> updateTask(@PathVariable Long id,
+			@Validated(OnUpdate.class) @RequestBody TaskUpdateDto taskDto) {
+		Task task = taskService.getTaskOrThrow(id);
+		taskService.validateUpdate(task, taskDto);
+		taskMapper.updateEntity(taskDto, task);
+		return ResponseEntity.ok(taskMapper.toResponseDto(taskService.updateExistingTask(id, task)));
 	}
 
+	@Operation(summary = "Delete a task")
+	@ApiResponse(responseCode = "204", description = "Task deleted")
+	@ApiResponse(responseCode = "404", description = "Task not found")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
-		if (taskService.deleteTask(id)) {
-			return ResponseEntity.noContent().build();
-		}
-
-		return ResponseEntity.notFound().build();
+		taskService.getTaskOrThrow(id);
+		taskService.deleteTask(id);
+		return ResponseEntity.noContent().build();
 	}
 }

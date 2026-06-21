@@ -1,15 +1,19 @@
 package com.azat.h1.repository;
 
+import com.azat.h1.model.Priority;
 import com.azat.h1.model.Task;
 import com.azat.h1.service.PrototypeScopedBean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -44,6 +48,7 @@ public class InMemoryTaskRepository implements TaskRepository {
 		if (task.getId() == null) {
 			task.setId(prototypeScopedBeanProvider.getObject().generateTaskId());
 		}
+		prepareForSave(task);
 
 		tasks.put(task.getId(), task);
 		return task;
@@ -56,6 +61,9 @@ public class InMemoryTaskRepository implements TaskRepository {
 		}
 
 		task.setId(id);
+		Task existingTask = tasks.get(id);
+		task.setCreatedAt(existingTask.getCreatedAt());
+		prepareForSave(task);
 		tasks.put(id, task);
 		return Optional.of(task);
 	}
@@ -63,5 +71,19 @@ public class InMemoryTaskRepository implements TaskRepository {
 	@Override
 	public boolean deleteById(Long id) {
 		return tasks.remove(id) != null;
+	}
+
+	private void prepareForSave(Task task) {
+		if (task.getCreatedAt() == null) {
+			task.setCreatedAt(LocalDateTime.now());
+		}
+		if (task.getPriority() == null) {
+			task.setPriority(Priority.MEDIUM);
+		}
+		if (task.getTags() == null) {
+			task.setTags(Set.of());
+		} else {
+			task.setTags(new LinkedHashSet<>(task.getTags()));
+		}
 	}
 }
