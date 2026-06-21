@@ -41,6 +41,11 @@ public class TaskController {
 		return taskStatisticsService.compareRepositories();
 	}
 
+	@GetMapping("/scope")
+	public String getScopeDetails() {
+		return taskStatisticsService.getScopeDetails();
+	}
+
 	@GetMapping("/{id}")
 	public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
 		return taskService.getTaskById(id)

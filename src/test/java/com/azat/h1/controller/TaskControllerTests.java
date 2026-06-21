@@ -128,11 +128,12 @@ class TaskControllerTests {
 	@Test
 	void deleteTaskReturnsNoContent() {
 		Task createdTask = createTask("Delete me", "Positive delete test");
+		HttpEntity<Void> request = new HttpEntity<>(null);
 
 		ResponseEntity<Void> response = restTemplate.exchange(
 				"/api/tasks/" + createdTask.getId(),
 				HttpMethod.DELETE,
-				HttpEntity.EMPTY,
+				request,
 				Void.class
 		);
 
@@ -144,10 +145,12 @@ class TaskControllerTests {
 
 	@Test
 	void deleteTaskReturnsNotFoundWhenTaskDoesNotExist() {
+		HttpEntity<Void> request = new HttpEntity<>(null);
+
 		ResponseEntity<String> response = restTemplate.exchange(
 				"/api/tasks/999999",
 				HttpMethod.DELETE,
-				HttpEntity.EMPTY,
+				request,
 				String.class
 		);
 
@@ -163,6 +166,16 @@ class TaskControllerTests {
 		assertThat(response.getBody()).isNotNull();
 		assertThat(response.getBody()).contains("Primary repository tasks:");
 		assertThat(response.getBody()).contains("stub repository tasks: 2");
+	}
+
+	@Test
+	void scopeEndpointReturnsRequestAndPrototypeDetails() {
+		ResponseEntity<String> response = restTemplate.getForEntity("/api/tasks/scope", String.class);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody()).isNotNull();
+		assertThat(response.getBody()).contains("requestId=");
+		assertThat(response.getBody()).contains("prototypeTaskId=");
 	}
 
 	@Test
