@@ -3,9 +3,11 @@ package com.azat.h1.exception;
 import com.azat.h1.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -65,6 +67,31 @@ public class GlobalExceptionHandler {
 		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, Map.of());
 	}
 
+	@ExceptionHandler(ExternalTaskNotFoundException.class)
+	public ResponseEntity<ErrorResponse> handleExternalTaskNotFound(ExternalTaskNotFoundException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, Map.of("source", "external-api"));
+	}
+
+	@ExceptionHandler(ExternalRateLimitException.class)
+	public ResponseEntity<ErrorResponse> handleExternalRateLimit(ExternalRateLimitException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request, Map.of());
+	}
+
+	@ExceptionHandler(ExternalApiException.class)
+	public ResponseEntity<ErrorResponse> handleExternalApi(ExternalApiException ex, HttpServletRequest request) {
+		Map<String, Object> details = ex.getStatusCode() == null
+				? Map.of("source", "external-api")
+				: Map.of("source", "external-api", "externalStatus", ex.getStatusCode().value());
+		return build(HttpStatus.BAD_GATEWAY, ex.getMessage(), request, details);
+	}
+
+	@ExceptionHandler(AuthenticationException.class)
+	public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
+		return build(HttpStatus.UNAUTHORIZED, "Authentication required", request, Map.of());
+	}
+
 	@ExceptionHandler(AttachmentNotFoundException.class)
 	public ResponseEntity<ErrorResponse> handleAttachmentNotFound(AttachmentNotFoundException ex,
 			HttpServletRequest request) {
@@ -109,6 +136,8 @@ public class GlobalExceptionHandler {
 				request.getRequestURI(),
 				details
 		);
-		return ResponseEntity.status(status).body(response);
+		return ResponseEntity.status(status)
+				.header(HttpHeaders.CONTENT_TYPE, "application/json")
+				.body(response);
 	}
 }
