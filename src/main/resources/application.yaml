@@ -9,6 +9,19 @@ app:
 api:
   version: 2.0.0
 
+jwt:
+  secret: ${JWT_SECRET:local-dev-secret-local-dev-secret-local-dev-secret}
+  expiration-minutes: 60
+
+security:
+  password-pepper: ${PASSWORD_PEPPER:local-pepper}
+
+external-api:
+  base-url: http://localhost:${server.port:8080}/external/v1
+  connect-timeout-ms: 1000
+  read-timeout-ms: 1500
+  user-agent: h1-gateway/1.0
+
 spring:
   profiles:
     active: dev
@@ -21,3 +34,42 @@ spring:
   web:
     resources:
       add-mappings: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,ratelimiters
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      externalApi:
+        sliding-window-type: count_based
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 10s
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+        ignore-exceptions:
+          - com.azat.h1.exception.ExternalTaskNotFoundException
+  ratelimiter:
+    instances:
+      externalApi:
+        limit-for-period: 5
+        limit-refresh-period: 10s
+        timeout-duration: 0
+  retry:
+    instances:
+      externalApi:
+        max-attempts: 2
+        wait-duration: 200ms
+  timelimiter:
+    instances:
+      externalApi:
+        timeout-duration: 2s
