@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.nio.file.Files;
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @TestPropertySource(properties = "app.upload-dir=target/test-uploads")
 class AttachmentServiceTests {
 
@@ -83,8 +85,8 @@ class AttachmentServiceTests {
 
 	@Test
 	void dueDateUpdateBeforeCreationIsRejected() {
-		Task task = taskService.createTask(new Task(null, "Future created task", "Reject old due date", false,
-				LocalDateTime.now().plusDays(2), LocalDate.now().plusDays(3), Priority.MEDIUM, Set.of("date")));
+		Task task = new Task(null, "Future created task", "Reject old due date", false,
+				LocalDateTime.now().plusDays(2), LocalDate.now().plusDays(3), Priority.MEDIUM, Set.of("date"));
 		TaskUpdateDto updateDto = new TaskUpdateDto();
 		updateDto.setDueDate(LocalDate.now());
 

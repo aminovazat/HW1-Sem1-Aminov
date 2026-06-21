@@ -77,6 +77,12 @@ public class GlobalExceptionHandler {
 		return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, Map.of());
 	}
 
+	@ExceptionHandler(BulkTaskUpdateException.class)
+	public ResponseEntity<ErrorResponse> handleBulkTaskUpdate(BulkTaskUpdateException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, Map.of("missingIds", ex.getMissingIds()));
+	}
+
 	@ExceptionHandler(FileStorageException.class)
 	public ResponseEntity<ErrorResponse> handleFileStorage(FileStorageException ex, HttpServletRequest request) {
 		return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request, Map.of());

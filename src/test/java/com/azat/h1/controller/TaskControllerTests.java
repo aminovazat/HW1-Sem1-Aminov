@@ -1,7 +1,9 @@
 package com.azat.h1.controller;
 
+import com.azat.h1.dto.BulkCompleteRequestDto;
 import com.azat.h1.dto.AttachmentResponseDto;
 import com.azat.h1.dto.ErrorResponse;
+import com.azat.h1.dto.PriorityTaskCountDto;
 import com.azat.h1.dto.TaskCreateDto;
 import com.azat.h1.dto.TaskResponseDto;
 import com.azat.h1.dto.TaskUpdateDto;
@@ -17,15 +19,18 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 class TaskControllerTests {
 
 	@Autowired
@@ -246,11 +251,74 @@ class TaskControllerTests {
 	void statisticsAndScopeEndpointsReturnDemoValues() {
 		ResponseEntity<String> statistics = restTemplate.getForEntity("/api/tasks/statistics", String.class);
 		ResponseEntity<String> scope = restTemplate.getForEntity("/api/tasks/scope", String.class);
+		ResponseEntity<PriorityTaskCountDto[]> priorityStatistics = restTemplate.getForEntity(
+				"/api/tasks/statistics/priority",
+				PriorityTaskCountDto[].class
+		);
 
 		assertThat(statistics.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(statistics.getBody()).contains("Primary repository tasks:");
 		assertThat(scope.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(scope.getBody()).contains("requestId=", "prototypeTaskId=");
+		assertThat(priorityStatistics.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(priorityStatistics.getBody()).isNotNull();
+	}
+
+	@Test
+	void dueSoonAndWithAttachmentsEndpointsReturnTasks() {
+		TaskResponseDto task = createTask("Due soon endpoint", "Task due soon");
+		uploadAttachment(task.getId(), "due-soon.txt", "file".getBytes());
+
+		ResponseEntity<TaskResponseDto[]> dueSoonResponse = restTemplate.getForEntity(
+				"/api/tasks/due-soon",
+				TaskResponseDto[].class
+		);
+		ResponseEntity<TaskResponseDto[]> withAttachmentsResponse = restTemplate.getForEntity(
+				"/api/tasks/with-attachments",
+				TaskResponseDto[].class
+		);
+
+		assertThat(dueSoonResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(dueSoonResponse.getBody()).isNotNull();
+		assertThat(dueSoonResponse.getBody()).extracting(TaskResponseDto::getId).contains(task.getId());
+		assertThat(withAttachmentsResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(withAttachmentsResponse.getBody()).isNotNull();
+		assertThat(withAttachmentsResponse.getBody()).extracting(TaskResponseDto::getId).contains(task.getId());
+	}
+
+	@Test
+	void bulkCompleteEndpointCompletesTasksTransactionally() {
+		TaskResponseDto firstTask = createTask("Bulk controller one", "Bulk complete");
+		TaskResponseDto secondTask = createTask("Bulk controller two", "Bulk complete");
+		BulkCompleteRequestDto request = new BulkCompleteRequestDto();
+		request.setIds(List.of(firstTask.getId(), secondTask.getId()));
+
+		ResponseEntity<TaskResponseDto[]> response = restTemplate.postForEntity(
+				"/api/tasks/bulk-complete",
+				request,
+				TaskResponseDto[].class
+		);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody()).isNotNull();
+		assertThat(response.getBody()).extracting(TaskResponseDto::isCompleted).containsOnly(true);
+	}
+
+	@Test
+	void bulkCompleteEndpointReturnsBadRequestWhenTaskIsMissing() {
+		TaskResponseDto task = createTask("Bulk missing controller", "Bulk complete");
+		BulkCompleteRequestDto request = new BulkCompleteRequestDto();
+		request.setIds(List.of(task.getId(), 999999L));
+
+		ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+				"/api/tasks/bulk-complete",
+				request,
+				ErrorResponse.class
+		);
+
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertThat(response.getBody()).isNotNull();
+		assertThat(response.getBody().getDetails()).containsKey("missingIds");
 	}
 
 	@Test

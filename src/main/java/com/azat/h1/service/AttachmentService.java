@@ -3,12 +3,16 @@ package com.azat.h1.service;
 import com.azat.h1.dto.AttachmentResponseDto;
 import com.azat.h1.exception.AttachmentNotFoundException;
 import com.azat.h1.exception.FileStorageException;
+import com.azat.h1.model.Task;
 import com.azat.h1.model.TaskAttachment;
 import com.azat.h1.repository.TaskAttachmentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -27,6 +31,8 @@ import java.util.UUID;
 @Service
 public class AttachmentService {
 
+	private static final Logger logger = LoggerFactory.getLogger(AttachmentService.class);
+
 	private final TaskAttachmentRepository attachmentRepository;
 	private final TaskService taskService;
 	private final Path uploadDirectory;
@@ -39,8 +45,9 @@ public class AttachmentService {
 		createUploadDirectory();
 	}
 
+	@Transactional
 	public AttachmentResponseDto storeAttachment(Long taskId, MultipartFile file) {
-		taskService.getTaskOrThrow(taskId);
+		Task task = taskService.getTaskOrThrow(taskId);
 		if (file == null || file.isEmpty()) {
 			throw new IllegalArgumentException("Uploaded file must not be empty");
 		}
@@ -57,21 +64,29 @@ public class AttachmentService {
 
 		TaskAttachment attachment = new TaskAttachment(
 				null,
-				taskId,
+				task,
 				originalFileName,
 				storedFileName,
 				file.getContentType(),
 				file.getSize(),
 				LocalDateTime.now()
 		);
-		return toDto(attachmentRepository.save(attachment));
+		task.getAttachments().add(attachment);
+		try {
+			return toDto(attachmentRepository.save(attachment));
+		} catch (RuntimeException ex) {
+			deleteStoredFileQuietly(targetFile);
+			throw ex;
+		}
 	}
 
+	@Transactional(readOnly = true)
 	public TaskAttachment getAttachment(Long attachmentId) {
 		return attachmentRepository.findById(attachmentId)
 				.orElseThrow(() -> new AttachmentNotFoundException(attachmentId));
 	}
 
+	@Transactional(readOnly = true)
 	public Resource loadAsResource(Long attachmentId) {
 		TaskAttachment attachment = getAttachment(attachmentId);
 		try {
@@ -85,6 +100,7 @@ public class AttachmentService {
 		}
 	}
 
+	@Transactional
 	public void deleteAttachment(Long attachmentId) {
 		TaskAttachment attachment = getAttachment(attachmentId);
 		try {
@@ -92,9 +108,10 @@ public class AttachmentService {
 		} catch (IOException ex) {
 			throw new FileStorageException("Could not delete attachment file", ex);
 		}
-		attachmentRepository.deleteById(attachmentId);
+		attachmentRepository.delete(attachment);
 	}
 
+	@Transactional(readOnly = true)
 	public List<AttachmentResponseDto> getTaskAttachments(Long taskId) {
 		taskService.getTaskOrThrow(taskId);
 		return attachmentRepository.findByTaskId(taskId).stream()
@@ -122,6 +139,14 @@ public class AttachmentService {
 			Files.createDirectories(uploadDirectory);
 		} catch (IOException ex) {
 			throw new FileStorageException("Could not create upload directory", ex);
+		}
+	}
+
+	private void deleteStoredFileQuietly(Path targetFile) {
+		try {
+			Files.deleteIfExists(targetFile);
+		} catch (IOException ignored) {
+			logger.warn("Could not clean up stored file {}", targetFile);
 		}
 	}
 

@@ -1,31 +1,58 @@
 package com.azat.h1.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Stores metadata for a file attached to a task.
+ * Stores metadata for a file attached to a persisted task.
  */
+@Entity
+@Table(name = "task_attachments")
 @Schema(description = "Task attachment metadata")
 public class TaskAttachment {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	private Long taskId;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "task_id", nullable = false)
+	private Task task;
+
+	@Column(name = "file_name", nullable = false)
 	private String fileName;
+
+	@Column(name = "stored_file_name", nullable = false)
 	private String storedFileName;
+
+	@Column(name = "content_type")
 	private String contentType;
+
+	@Column(nullable = false)
 	private long size;
+
+	@Column(name = "uploaded_at", nullable = false)
 	private LocalDateTime uploadedAt;
 
 	public TaskAttachment() {
 	}
 
-	public TaskAttachment(Long id, Long taskId, String fileName, String storedFileName, String contentType, long size,
+	public TaskAttachment(Long id, Task task, String fileName, String storedFileName, String contentType, long size,
 			LocalDateTime uploadedAt) {
 		this.id = id;
-		this.taskId = taskId;
+		this.task = task;
 		this.fileName = fileName;
 		this.storedFileName = storedFileName;
 		this.contentType = contentType;
@@ -41,12 +68,17 @@ public class TaskAttachment {
 		this.id = id;
 	}
 
-	public Long getTaskId() {
-		return taskId;
+	public Task getTask() {
+		return task;
 	}
 
-	public void setTaskId(Long taskId) {
-		this.taskId = taskId;
+	public void setTask(Task task) {
+		this.task = task;
+	}
+
+	@Transient
+	public Long getTaskId() {
+		return task == null ? null : task.getId();
 	}
 
 	public String getFileName() {
@@ -97,25 +129,19 @@ public class TaskAttachment {
 		if (!(o instanceof TaskAttachment that)) {
 			return false;
 		}
-		return size == that.size
-				&& Objects.equals(id, that.id)
-				&& Objects.equals(taskId, that.taskId)
-				&& Objects.equals(fileName, that.fileName)
-				&& Objects.equals(storedFileName, that.storedFileName)
-				&& Objects.equals(contentType, that.contentType)
-				&& Objects.equals(uploadedAt, that.uploadedAt);
+		return id != null && Objects.equals(id, that.id);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, taskId, fileName, storedFileName, contentType, size, uploadedAt);
+		return getClass().hashCode();
 	}
 
 	@Override
 	public String toString() {
 		return "TaskAttachment{"
 				+ "id=" + id
-				+ ", taskId=" + taskId
+				+ ", taskId=" + getTaskId()
 				+ ", fileName='" + fileName + '\''
 				+ ", storedFileName='" + storedFileName + '\''
 				+ ", contentType='" + contentType + '\''
