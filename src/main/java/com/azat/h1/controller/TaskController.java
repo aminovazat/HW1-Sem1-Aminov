@@ -1,16 +1,20 @@
 package com.azat.h1.controller;
 
+import com.azat.h1.dto.BulkCompleteRequestDto;
+import com.azat.h1.dto.PriorityTaskCountDto;
 import com.azat.h1.dto.TaskCreateDto;
 import com.azat.h1.dto.TaskResponseDto;
 import com.azat.h1.dto.TaskUpdateDto;
 import com.azat.h1.mapper.TaskMapper;
 import com.azat.h1.model.Task;
 import com.azat.h1.service.TaskService;
+import com.azat.h1.service.TaskStatisticsJdbcService;
 import com.azat.h1.service.TaskStatisticsService;
 import com.azat.h1.validation.OnCreate;
 import com.azat.h1.validation.OnUpdate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -34,11 +38,14 @@ public class TaskController {
 
 	private final TaskService taskService;
 	private final TaskStatisticsService taskStatisticsService;
+	private final TaskStatisticsJdbcService taskStatisticsJdbcService;
 	private final TaskMapper taskMapper;
 
-	public TaskController(TaskService taskService, TaskStatisticsService taskStatisticsService, TaskMapper taskMapper) {
+	public TaskController(TaskService taskService, TaskStatisticsService taskStatisticsService,
+			TaskStatisticsJdbcService taskStatisticsJdbcService, TaskMapper taskMapper) {
 		this.taskService = taskService;
 		this.taskStatisticsService = taskStatisticsService;
+		this.taskStatisticsJdbcService = taskStatisticsJdbcService;
 		this.taskMapper = taskMapper;
 	}
 
@@ -64,6 +71,35 @@ public class TaskController {
 	@GetMapping("/scope")
 	public ResponseEntity<String> getScopeDetails() {
 		return ResponseEntity.ok(taskStatisticsService.getScopeDetails());
+	}
+
+	@Operation(summary = "Get task counts grouped by priority")
+	@ApiResponse(responseCode = "200", description = "Priority statistics returned")
+	@GetMapping("/statistics/priority")
+	public ResponseEntity<List<PriorityTaskCountDto>> getPriorityStatistics() {
+		return ResponseEntity.ok(taskStatisticsJdbcService.getTasksCountByPriority());
+	}
+
+	@Operation(summary = "Get tasks due within the next seven days")
+	@ApiResponse(responseCode = "200", description = "Due soon tasks returned")
+	@GetMapping("/due-soon")
+	public ResponseEntity<List<TaskResponseDto>> getTasksDueWithinNextSevenDays() {
+		return ResponseEntity.ok(taskMapper.toResponseDtos(taskService.getTasksDueWithinNextSevenDays()));
+	}
+
+	@Operation(summary = "Get tasks with attachments loaded")
+	@ApiResponse(responseCode = "200", description = "Tasks returned with attachments loaded")
+	@GetMapping("/with-attachments")
+	public ResponseEntity<List<TaskResponseDto>> getTasksWithAttachments() {
+		return ResponseEntity.ok(taskMapper.toResponseDtos(taskService.getTasksWithAttachments()));
+	}
+
+	@Operation(summary = "Complete several tasks transactionally")
+	@ApiResponse(responseCode = "200", description = "Tasks completed")
+	@ApiResponse(responseCode = "400", description = "At least one task was not found")
+	@PostMapping("/bulk-complete")
+	public ResponseEntity<List<TaskResponseDto>> bulkCompleteTasks(@Valid @RequestBody BulkCompleteRequestDto request) {
+		return ResponseEntity.ok(taskMapper.toResponseDtos(taskService.bulkCompleteTasks(request.getIds())));
 	}
 
 	@Operation(summary = "Get a task by id")
