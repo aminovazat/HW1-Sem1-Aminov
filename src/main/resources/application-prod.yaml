@@ -1,0 +1,4 @@
+logging:
+  level:
+    root: WARN
+    com.azat.h1: INFO
