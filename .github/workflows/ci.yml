@@ -22,5 +22,10 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Check Docker
+        run: docker version
+
       - name: Run tests
+        env:
+          SPRING_PROFILES_ACTIVE: test
         run: ./mvnw -B test -Dspring.profiles.active=test
